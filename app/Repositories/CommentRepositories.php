@@ -187,6 +187,7 @@ class CommentRepositories implements CommentContract
     public function downloadCommentByUserID(int $id): Model
     {
         return Comment::leftJoin('likes', 'comments.uuid', 'likes.comment_id')
+            ->leftJoin('guests', 'comments.guest_id', 'guests.id')
             ->where('comments.user_id', $id)
             ->groupBy([
                 'comments.uuid',
@@ -199,7 +200,10 @@ class CommentRepositories implements CommentContract
                 'comments.ip',
                 'comments.user_agent',
                 'comments.created_at',
-                'comments.parent_id'
+                'comments.parent_id',
+                'comments.guest_id',
+                'guests.token',
+                'guests.rsvp_status',
             ])
             ->select([
                 'comments.uuid',
@@ -213,7 +217,10 @@ class CommentRepositories implements CommentContract
                 'comments.ip',
                 'comments.user_agent',
                 'comments.created_at as insert_at',
-                'comments.parent_id'
+                'comments.parent_id',
+                'comments.guest_id',
+                'guests.token as guest_token',
+                'guests.rsvp_status',
             ])
             ->orderBy('insert_at', 'DESC')
             ->get();

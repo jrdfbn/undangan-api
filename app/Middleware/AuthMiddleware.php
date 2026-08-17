@@ -2,6 +2,7 @@
 
 namespace App\Middleware;
 
+use App\Models\Guest;
 use App\Models\User;
 use App\Response\JsonResponse;
 use Closure;
@@ -47,20 +48,50 @@ final class AuthMiddleware implements MiddlewareInterface
             return $next($request);
         }
 
+        $key = $request->server->get('HTTP_X_ACCESS_KEY');
+
         $valid = Validator::make(
             [
-                'key' => $request->server->get('HTTP_X_ACCESS_KEY')
+                'key' => $key
             ],
             [
                 'key' => ['required', 'str', 'trim', 'alpha_num', 'min:49', 'max:50']
             ]
         );
 
-        if ($valid->fails()) {
-            return (new JsonResponse)->errorBadRequest($valid->messages());
+        if (!$valid->fails()) {
+            $user = User::where('access_key', $valid->key)->limit(1)->first();
+            if ($user->exist()) {
+                if (!$user->isActive()) {
+                    return (new JsonResponse)->errorBadRequest(['user not active.']);
+                }
+
+                $user->setAsNonAdmin();
+
+                Auth::login($user);
+                return $next($request);
+            }
         }
 
-        $user = User::where('access_key', $valid->key)->limit(1)->first();
+        $gvalid = Validator::make(
+            [
+                'key' => $key
+            ],
+            [
+                'key' => ['required', 'str', 'trim', 'alpha_num', 'min:12', 'max:64']
+            ]
+        );
+
+        if ($gvalid->fails()) {
+            return (new JsonResponse)->errorBadRequest($gvalid->messages());
+        }
+
+        $guest = Guest::where('token', $gvalid->key)->limit(1)->first();
+        if (!$guest->exist()) {
+            return (new JsonResponse)->errorBadRequest(['user not found.']);
+        }
+
+        $user = User::find(intval($guest->user_id));
         if (!$user->exist()) {
             return (new JsonResponse)->errorBadRequest(['user not found.']);
         }
@@ -70,6 +101,7 @@ final class AuthMiddleware implements MiddlewareInterface
         }
 
         $user->setAsNonAdmin();
+        $user->setGuest($guest);
 
         Auth::login($user);
         return $next($request);

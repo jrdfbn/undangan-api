@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use App\Repositories\CommentContract;
 use App\Repositories\CommentRepositories;
+use App\Repositories\GuestContract;
+use App\Repositories\GuestRepositories;
 use App\Repositories\LikeContract;
 use App\Repositories\LikeRepositories;
 use App\Repositories\UserContract;
@@ -21,6 +23,7 @@ class AppServiceProvider extends Provider
     public function registrasi()
     {
         $this->app->bind(CommentContract::class, CommentRepositories::class);
+        $this->app->bind(GuestContract::class, GuestRepositories::class);
         $this->app->bind(LikeContract::class, LikeRepositories::class);
         $this->app->bind(UserContract::class, UserRepositories::class);
     }

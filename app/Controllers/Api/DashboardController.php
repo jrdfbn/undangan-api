@@ -137,6 +137,9 @@ class DashboardController extends Controller
             'user_agent',
             'created_at',
             'parent_id',
+            'guest_id',
+            'guest_token',
+            'rsvp_status',
         ]);
 
         foreach ($comment->downloadCommentByUserID(Auth::id()) as $value) {

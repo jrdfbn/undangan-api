@@ -4,6 +4,7 @@ namespace App\Controllers\Api;
 
 use App\Middleware\UuidMiddleware;
 use App\Repositories\CommentContract;
+use App\Repositories\GuestContract;
 use App\Repositories\LikeContract;
 use App\Request\InsertCommentRequest;
 use App\Response\JsonResponse;
@@ -18,12 +19,14 @@ use Throwable;
 class CommentController extends Controller
 {
     private $comment;
+    private $guest;
     private $json;
 
-    public function __construct(CommentContract $comment, JsonResponse $json)
+    public function __construct(CommentContract $comment, GuestContract $guest, JsonResponse $json)
     {
         $this->json = $json;
         $this->comment = $comment;
+        $this->guest = $guest;
     }
 
     private function getTenorUrl(string $id): string|null
@@ -181,6 +184,18 @@ class CommentController extends Controller
             ->save();
 
         if ($status === 1) {
+            if (
+                Auth::user()->isGuest()
+                && $comment->guest_id === Auth::user()->guestId()
+                && empty($comment->parent_id)
+                && $valid->presence !== null
+            ) {
+                $this->guest->updateStatusByGuestId(
+                    Auth::user()->guestId(),
+                    $valid->presence ? 'datang' : 'berhalangan'
+                );
+            }
+
             return $this->json->successStatusTrue();
         }
 
@@ -223,8 +238,17 @@ class CommentController extends Controller
             ...$valid->except(['id']),
             'user_id' => Auth::id(),
             'parent_id' => $valid->id,
-            'is_admin' => Auth::user()->isAdmin()
+            'is_admin' => Auth::user()->isAdmin(),
+            'guest_id' => Auth::user()->guestId(),
         ]);
+
+        if (Auth::user()->isGuest() && empty($valid->id) && $valid->presence !== null) {
+            $this->guest->updateStatusByGuestId(
+                Auth::user()->guestId(),
+                $valid->presence ? 'datang' : 'berhalangan',
+                ($valid->presence ? $valid->guest_count : null)
+            );
+        }
 
         return $this->json->success(
             $comment->only(['name', 'presence', 'comment', 'uuid', 'own', 'gif_url', 'created_at']),

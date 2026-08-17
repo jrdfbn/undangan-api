@@ -66,6 +66,26 @@ final class User extends Model
         $this->attributes['is_admin'] = false;
     }
 
+    public function setGuest(Guest $guest): void
+    {
+        $this->attributes['guest'] = $guest;
+    }
+
+    public function guest(): Guest|null
+    {
+        return $this->attributes['guest'] ?? null;
+    }
+
+    public function guestId(): int|null
+    {
+        return $this->attributes['guest']->id ?? null;
+    }
+
+    public function isGuest(): bool
+    {
+        return isset($this->attributes['guest']);
+    }
+
     public function isAdmin(): bool
     {
         return boolval($this->attributes['is_admin']);
