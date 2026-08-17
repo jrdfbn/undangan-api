@@ -11,6 +11,7 @@ interface CommentContract
     public function count(int $user_id): int;
     public function getByUuid(int $user_id, string $uuid): Model;
     public function getByOwnId(int $user_id, string $own_id): Model;
+    public function getTopByGuestId(int $user_id, int $guest_id): Model;
     public function deleteAllByUuid(int $userId, string $uuid): bool;
     public function deleteByParentID(string $uuid): int;
     public function countCommentByUserID(int $id): int;

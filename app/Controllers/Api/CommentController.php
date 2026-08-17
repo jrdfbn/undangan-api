@@ -179,7 +179,7 @@ class CommentController extends Controller
             return $this->json->errorBadRequest(['Comment or GIF must be provided']);
         }
 
-        $status = $comment->only(['id', 'presence', 'comment', 'gif_url'])
+        $status = $comment->only(['id', 'presence', 'comment', 'gif_url', 'guest_count', 'guest_id'])
             ->fill($valid->only(['presence', 'comment', 'gif_url']))
             ->save();
 
@@ -192,7 +192,8 @@ class CommentController extends Controller
             ) {
                 $this->guest->updateStatusByGuestId(
                     Auth::user()->guestId(),
-                    $valid->presence ? 'datang' : 'berhalangan'
+                    $valid->presence ? 'datang' : 'berhalangan',
+                    ($valid->presence ? $comment->guest_count : null)
                 );
             }
 
@@ -234,6 +235,41 @@ class CommentController extends Controller
             return $this->json->errorBadRequest(['Comment or GIF must be provided']);
         }
 
+        $syncGuestStatus = function () use ($valid): void {
+            if (Auth::user()->isGuest() && empty($valid->id) && $valid->presence !== null) {
+                $this->guest->updateStatusByGuestId(
+                    Auth::user()->guestId(),
+                    $valid->presence ? 'datang' : 'berhalangan',
+                    ($valid->presence ? $valid->guest_count : null)
+                );
+            }
+        };
+
+        if (Auth::user()->isGuest() && empty($valid->id) && $valid->presence !== null) {
+            $existing = $this->comment->getTopByGuestId(Auth::id(), Auth::user()->guestId());
+
+            if ($existing->exist()) {
+                $existing->only([
+                    'id', 'name', 'presence', 'guest_count', 'comment', 'gif_url',
+                ])->fill([
+                    'name' => $valid->name,
+                    'presence' => $valid->presence,
+                    'guest_count' => $valid->guest_count,
+                    'comment' => $valid->comment ?? $existing->comment,
+                    'gif_url' => $valid->gif_url ?? $existing->gif_url,
+                ])->save();
+
+                $syncGuestStatus();
+
+                $updated = $this->comment->getTopByGuestId(Auth::id(), Auth::user()->guestId());
+
+                return $this->json->success(
+                    $updated->only(['name', 'presence', 'comment', 'uuid', 'own', 'gif_url', 'created_at']),
+                    Respond::HTTP_CREATED
+                );
+            }
+        }
+
         $comment = $this->comment->create([
             ...$valid->except(['id']),
             'user_id' => Auth::id(),
@@ -242,13 +278,7 @@ class CommentController extends Controller
             'guest_id' => Auth::user()->guestId(),
         ]);
 
-        if (Auth::user()->isGuest() && empty($valid->id) && $valid->presence !== null) {
-            $this->guest->updateStatusByGuestId(
-                Auth::user()->guestId(),
-                $valid->presence ? 'datang' : 'berhalangan',
-                ($valid->presence ? $valid->guest_count : null)
-            );
-        }
+        $syncGuestStatus();
 
         return $this->json->success(
             $comment->only(['name', 'presence', 'comment', 'uuid', 'own', 'gif_url', 'created_at']),

@@ -121,6 +121,16 @@ class CommentRepositories implements CommentContract
             ->first();
     }
 
+    public function getTopByGuestId(int $user_id, int $guest_id): Model
+    {
+        return Comment::where('user_id', $user_id)
+            ->where('guest_id', $guest_id)
+            ->whereNull('parent_id')
+            ->orderBy('id', 'DESC')
+            ->limit(1)
+            ->first();
+    }
+
     public function deleteAllByUuid(int $userId, string $uuid): bool
     {
         $commentUuids = [$uuid];
@@ -204,6 +214,7 @@ class CommentRepositories implements CommentContract
                 'comments.guest_id',
                 'guests.token',
                 'guests.rsvp_status',
+                'guests.name',
             ])
             ->select([
                 'comments.uuid',
@@ -221,6 +232,7 @@ class CommentRepositories implements CommentContract
                 'comments.guest_id',
                 'guests.token as guest_token',
                 'guests.rsvp_status',
+                'guests.name as guest_name',
             ])
             ->orderBy('insert_at', 'DESC')
             ->get();
