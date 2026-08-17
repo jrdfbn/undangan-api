@@ -20,6 +20,7 @@ final class Comment extends Model
         'own',
         'is_admin',
         'gif_url',
+        'guest_count',
     ];
 
     protected $casts = [

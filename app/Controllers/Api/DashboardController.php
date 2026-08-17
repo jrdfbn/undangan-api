@@ -31,6 +31,7 @@ class DashboardController extends Controller
         return $this->json->successOK([
             'present' => intval($comments->present_count ?? 0),
             'absent' => intval($comments->absent_count ?? 0),
+            'guests' => intval($comments->guest_count ?? 0),
             'likes' => $like->countLikeByUserID(Auth::id()),
             'comments' => $comment->countCommentByUserID(Auth::id())
         ]);
@@ -128,6 +129,7 @@ class DashboardController extends Controller
             'like',
             'name',
             'presence',
+            'guest_count',
             'is_admin',
             'comment',
             'gif_url',

@@ -178,7 +178,8 @@ class CommentRepositories implements CommentContract
             ->groupBy('user_id')
             ->select([
                 'SUM(CASE WHEN presence = TRUE THEN 1 ELSE 0 END) AS present_count',
-                'SUM(CASE WHEN presence = FALSE THEN 1 ELSE 0 END) AS absent_count'
+                'SUM(CASE WHEN presence = FALSE THEN 1 ELSE 0 END) AS absent_count',
+                'SUM(comments.guest_count) AS guest_count'
             ])
             ->first();
     }
@@ -191,6 +192,7 @@ class CommentRepositories implements CommentContract
                 'comments.uuid',
                 'comments.name',
                 'comments.presence',
+                'comments.guest_count',
                 'comments.is_admin',
                 'comments.comment',
                 'comments.gif_url',
@@ -204,6 +206,7 @@ class CommentRepositories implements CommentContract
                 'count(likes.id) as count_like',
                 'comments.name',
                 'comments.presence',
+                'comments.guest_count',
                 'comments.is_admin',
                 'comments.comment',
                 'comments.gif_url',
