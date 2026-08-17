@@ -78,7 +78,7 @@ final class AuthMiddleware implements MiddlewareInterface
                 'key' => $key
             ],
             [
-                'key' => ['required', 'str', 'trim', 'alpha_num', 'min:12', 'max:64']
+                'key' => ['required', 'str', 'trim', 'alpha_num', 'min:6', 'max:64']
             ]
         );
 

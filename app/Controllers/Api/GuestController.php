@@ -114,7 +114,15 @@ class GuestController extends Controller
             'token',
             'rsvp_status',
             'guest_count',
+            'link',
         ]);
+
+        $origin = env('SITE_URL');
+        if (empty($origin)) {
+            $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+        }
+
+        $base = rtrim($origin, '/');
 
         foreach ($guest->findAllByUserID(Auth::id()) as $row) {
             fputcsv($streamResource, [
@@ -123,6 +131,7 @@ class GuestController extends Controller
                 $row->token,
                 $row->rsvp_status,
                 $row->guest_count,
+                $base === '' ? '' : sprintf('%s/?t=%s&to=%s', $base, rawurlencode($row->token), rawurlencode($row->name)),
             ]);
         }
 

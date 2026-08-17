@@ -3,7 +3,7 @@
         "api/*.php": {
             "runtime": "vercel-php@0.6.2",
             "memory": 1024,
-            "maxDuration": 10
+            "maxDuration": 60
         }
     },
     "routes": [

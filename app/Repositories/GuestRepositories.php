@@ -3,25 +3,21 @@
 namespace App\Repositories;
 
 use App\Models\Guest;
+use Core\Database\DB;
+use Core\Database\DataBase;
+use Core\Facades\App;
 use Core\Model\Model;
-use Core\Valid\Hash;
 
 class GuestRepositories implements GuestContract
 {
     /**
-     * Membuat token unik yang tidak bentrok.
+     * Membuat token pendek (8 karakter hex).
      *
      * @return string
      */
     private function generateToken(): string
     {
-        $token = Hash::rand(16);
-
-        if (Guest::where('token', $token)->first()->exist()) {
-            return $this->generateToken();
-        }
-
-        return $token;
+        return bin2hex(random_bytes(4));
     }
 
     public function getByToken(string $token): Model
@@ -88,22 +84,70 @@ class GuestRepositories implements GuestContract
         }
 
         $names = array_values(array_unique($names));
-        $created = [];
 
-        foreach ($names as $name) {
-            $row = $this->create($user_id, $name);
-            $created[] = [
-                'id' => $row->id,
-                'name' => $row->name,
-                'token' => $row->token,
-                'rsvp_status' => $row->rsvp_status,
-                'guest_count' => $row->guest_count,
+        if (count($names) === 0) {
+            return [
+                'created' => [],
+                'skipped' => max(0, $attempted)
+            ];
+        }
+
+        $taken = [];
+        $tokens = [];
+        foreach ($names as $index => $name) {
+            do {
+                $token = $this->generateToken();
+            } while (isset($taken[$token]));
+
+            $taken[$token] = true;
+            $tokens[$index] = $token;
+        }
+
+        $created = count($names);
+        $now = now('Y-m-d H:i:s.u');
+        $rows = [];
+
+        foreach ($names as $index => $name) {
+            $rows[] = [$user_id, $name, $tokens[$index], 'pending', null, $now, $now];
+        }
+
+        DB::transaction(function () use ($rows): void {
+            $db = App::get()->singleton(DataBase::class);
+
+            foreach (array_chunk($rows, 300) as $batch) {
+                $sql = 'INSERT INTO guests (user_id, name, token, rsvp_status, guest_count, created_at, updated_at) VALUES '
+                    . implode(', ', array_fill(0, count($batch), '(?, ?, ?, ?, ?, ?, ?)')) . ';';
+
+                $db->query($sql);
+
+                $values = [];
+                foreach ($batch as $row) {
+                    foreach ($row as $value) {
+                        $values[] = $value;
+                    }
+                }
+
+                foreach ($values as $position => $value) {
+                    $db->bind($position + 1, $value);
+                }
+
+                $db->execute();
+            }
+        });
+
+        $createdLists = [];
+        foreach ($names as $index => $name) {
+            $createdLists[] = [
+                'name' => $name,
+                'token' => $tokens[$index],
+                'rsvp_status' => 'pending',
+                'guest_count' => null,
             ];
         }
 
         return [
-            'created' => $created,
-            'skipped' => max(0, $attempted - count($created))
+            'created' => $createdLists,
+            'skipped' => max(0, $attempted - $created)
         ];
     }
 
